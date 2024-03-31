@@ -6,6 +6,9 @@ env:
 
 on:
   pull_request:
+    branches-ignore:
+      - "develop"
+      - "master"
 
 permissions: write-all
 
@@ -31,4 +34,6 @@ jobs:
         run: vercel build -A vercel/dev.config.json --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Deploy Project Artifacts to Vercel
-        run: vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
+        run: |
+          url="$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }})"
+          vercel alias --token=${{ secrets.VERCEL_TOKEN }} set "$url" dcard-fih-preview.vercel.app
