@@ -1,11 +1,10 @@
 import { AntdRegistry } from "@ant-design/nextjs-registry";
 import { Contrail_One } from "next/font/google";
-import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 
 import type { Metadata } from "next";
 
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/app/api/auth/[...nextauth]/auth";
 import StyledComponentsRegistry from "@/libs/styled-components";
 import SessionProvider from "@/providers/session";
 import ThemeProvider from "@/providers/theme";
