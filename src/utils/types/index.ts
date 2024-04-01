@@ -1,5 +1,6 @@
 import type { JSXElementConstructor } from "react";
 
 export type Type<
-  T extends keyof JSX.IntrinsicElements | JSXElementConstructor<unknown>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  T extends keyof JSX.IntrinsicElements | JSXElementConstructor<any>
 > = React.ComponentProps<T>;
