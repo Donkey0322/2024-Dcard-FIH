@@ -88,7 +88,6 @@ const Button = styled(TapButton)`
 `;
 
 export default function Cover({ isAuth }: { isAuth: boolean }) {
-  // const { data: session } = useSession();
   return (
     <Background>
       {!isAuth && (
