@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return */
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 
@@ -8,12 +7,18 @@ import type { AuthOptions } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/auth";
 import Gallery from "@/modules/main/components/Gallery";
 import Header from "@/modules/main/components/Header";
-import { getIssues } from "@/modules/main/components/services";
+import { getIssues } from "@/modules/main/services";
 
-export default async function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Record<string, string | string[] | undefined>;
+}) {
   const session = await getServerSession<AuthOptions, MySession>(authOptions);
-  const data = await getIssues();
   if (!session) redirect("/");
+
+  const currentPage = Number(searchParams?.page) || 1;
+  const data = await getIssues(currentPage);
 
   return (
     <>

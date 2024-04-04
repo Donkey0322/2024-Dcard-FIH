@@ -1,27 +1,32 @@
 "use client";
 
-import { Tooltip } from "antd";
+import { Skeleton, Tooltip } from "antd";
 import { formatRelative, parseISO } from "date-fns";
-import { useState } from "react";
-import ReactMarkDown from "react-markdown";
+import { useRouter } from "next/navigation";
+import { useRef, useState } from "react";
 import styled from "styled-components";
 
-import type { Endpoints } from "@octokit/types";
+import type { IssueType } from "@/modules/main/types";
 
-import RippleButton from "@/components/Button/RippleButton";
+import { RippleButton } from "@/components/Button";
 import Divider from "@/components/Divider";
-import { closeIssue } from "@/modules/main/components/services";
+import Markdown from "@/components/Markdown";
+import { useOverflow } from "@/hooks/useElements";
+import useUrl from "@/hooks/useUrl";
+import { IssueBody } from "@/modules/main/components/Issue/Body";
+import Operation from "@/modules/main/components/Operation";
+import { closeIssue } from "@/modules/main/services";
 import theme from "@/providers/theme/theme";
 
 import MoreIcon from "@/assets/icons/more";
 
 interface Props {
-  issue?: Endpoints["GET /issues"]["response"]["data"][number];
+  issue?: IssueType;
 }
 
 const GalleryItemContainer = styled.div`
-  aspect-ratio: 4 / 2;
   width: 400px;
+  max-width: 100%;
   border: 2px solid ${({ theme }) => theme.gray["500"]};
   border-radius: 1em;
   box-shadow: rgba(50, 50, 93, 0.25) 0px 6px 12px -2px,
@@ -44,18 +49,12 @@ const GalleryItemTitle = styled.div`
   justify-content: space-between;
 `;
 
-const GalleryItemBody = styled.span`
+export const GalleryItemBody = styled(IssueBody)`
   margin: 0.5em 1em;
-  & ul {
-    margin-left: 1em;
-  }
-  & img {
-    width: 100%;
-  }
-  &,
-  & * {
-    line-height: 2em;
-  }
+  max-height: 200px;
+  min-height: 200px;
+  overflow: hidden;
+  position: relative;
 `;
 
 const GalleryItemFooterContainer = styled.div`
@@ -77,11 +76,21 @@ const GalleryItemFooterContent = styled.div`
 `;
 
 export default function GalleryItem({ issue }: Props) {
-  const [open, setOpen] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  const [toolTipOpen, setToolTipOpen] = useState(false);
 
-  const handleCloseIssue = async () => {
-    setDeleting(true);
+  const element = useRef<HTMLDivElement>(null);
+  const isOverflow = useOverflow(element);
+
+  const router = useRouter();
+  const infoIssueUrl = useUrl({ mode: "info" }, `/post/${issue?.id}`);
+  const editIssueUrl = useUrl({ mode: "edit" }, `/post/${issue?.id}`);
+
+  const handleEdit = () => {
+    router.replace(editIssueUrl);
+    setToolTipOpen(false);
+  };
+
+  const handleClose = async () => {
     if (
       issue?.repository?.name &&
       issue?.repository?.owner?.login &&
@@ -92,40 +101,62 @@ export default function GalleryItem({ issue }: Props) {
         owner: issue.repository.owner.login,
         issue: issue.number,
       });
-    setOpen(false);
-    setDeleting(false);
+    setToolTipOpen(false);
   };
 
   return (
-    <GalleryItemContainer>
+    <GalleryItemContainer
+      onClick={() => {
+        router.replace(infoIssueUrl);
+      }}
+    >
       <GalleryItemTitle>
         {issue?.title}
         <Tooltip
-          open={open}
+          open={toolTipOpen}
           title={
-            <RippleButton
-              category="solid"
-              palette="red"
-              loading={deleting}
-              onClick={() => {
-                void handleCloseIssue();
-              }}
-            >
-              刪除
-            </RippleButton>
+            <Operation handleEdit={handleEdit} handleClose={handleClose} />
           }
-          onOpenChange={() => setOpen((prev) => !prev)}
+          onOpenChange={() => setToolTipOpen((prev) => !prev)}
           trigger="click"
           color={theme.white}
+          placement="bottom"
         >
-          <RippleButton category="icon" palette="gray">
+          <RippleButton
+            category="icon"
+            palette="gray"
+            onClick={(event) => {
+              event.stopPropagation();
+            }}
+          >
             <MoreIcon></MoreIcon>
           </RippleButton>
         </Tooltip>
       </GalleryItemTitle>
       <Divider />
       <GalleryItemBody>
-        <ReactMarkDown>{issue?.body}</ReactMarkDown>
+        {isOverflow === undefined && (
+          <Skeleton
+            active
+            style={{ position: "absolute", backgroundColor: "white" }}
+            paragraph={{ rows: 5 }}
+          />
+        )}
+        {isOverflow && (
+          <RippleButton
+            category="outlined"
+            palette="gray"
+            style={{ lineHeight: "1em" }}
+          >
+            點擊以查看內容
+          </RippleButton>
+        )}
+        <div
+          ref={element}
+          style={{ visibility: isOverflow ? "hidden" : "visible" }}
+        >
+          <Markdown>{issue?.body}</Markdown>
+        </div>
       </GalleryItemBody>
       <GalleryItemFooterContainer>
         <GalleryItemFooterContent>

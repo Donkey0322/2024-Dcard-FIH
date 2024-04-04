@@ -42,7 +42,7 @@ const RippleButtonBase = styled(ThemeButton).withConfig({
           padding: 0.5em !important;
         `
       : css`
-          height: fit-content;
+          height: fit-content !important;
         `}
 `;
 
