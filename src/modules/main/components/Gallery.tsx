@@ -1,13 +1,18 @@
 "use client";
 
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import styled from "styled-components";
 
-import type { Endpoints } from "@octokit/types";
+import type { IssueType } from "@/modules/main/types";
 
+import { useScrollToEnd } from "@/hooks/useElements";
+import useUrl from "@/hooks/useUrl";
 import GalleryItem from "@/modules/main/components/GalleryItem";
+import PostModal from "@/modules/main/components/PostModal";
 
 interface Props {
-  issues?: Endpoints["GET /issues"]["response"]["data"];
+  issues?: IssueType[];
 }
 
 const GalleryContainer = styled.div`
@@ -33,13 +38,40 @@ const GalleryContent = styled.div`
 `;
 
 export default function Gallery({ issues }: Props) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+
+  const pathname = usePathname();
+  const issueId = Number(pathname.split("/")?.[2]);
+
+  const searchParams = useSearchParams();
+  const currentPage = Number(searchParams.get("page")) || 1;
+
+  useEffect(() => setOpen(issueId ? true : false), [issueId]);
+
+  const newPage = useUrl({ page: String(currentPage + 1) });
+  const homePage = useUrl(undefined, "/post", { delete: ["mode"] });
+
+  const scrollElement = useScrollToEnd(() => {
+    if (issues?.length && issues.length >= 10 * currentPage)
+      router.replace(newPage);
+  });
+
   return (
     <GalleryContainer>
-      <GalleryContent>
+      <GalleryContent ref={scrollElement}>
         {issues?.map((issue, index) => (
           <GalleryItem key={index} issue={issue} />
         ))}
       </GalleryContent>
+      <PostModal
+        open={open}
+        onCancel={() => {
+          router.replace(homePage);
+          setOpen(false);
+        }}
+        issue={issues?.find((issue) => issue.id === issueId)}
+      />
     </GalleryContainer>
   );
 }

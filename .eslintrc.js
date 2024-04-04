@@ -3,7 +3,7 @@ module.exports = {
     "plugin:@typescript-eslint/recommended-type-checked",
     "plugin:@typescript-eslint/stylistic-type-checked",
     "next/core-web-vitals",
-    "plugin:@next/next/recommended",
+    // "plugin:@next/next/recommended",
   ],
   parser: "@typescript-eslint/parser",
   parserOptions: {
@@ -46,5 +46,6 @@ module.exports = {
     "@typescript-eslint/no-unsafe-call": "off",
     "@typescript-eslint/no-unsafe-assignment": "off",
     "@typescript-eslint/no-unsafe-member-access": "off",
+    "@typescript-eslint/no-unsafe-argument": "off",
   },
 };

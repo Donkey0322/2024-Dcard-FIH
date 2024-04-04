@@ -3,7 +3,7 @@ import styled, { css } from "styled-components";
 
 import type { ButtonThemeProps, ButtonType } from "@/components/Button/theme";
 import type { Type } from "@/utils/types";
-import type { ReactNode } from "react";
+import type { ReactNode, RefObject } from "react";
 
 import getTheme from "@/components/Button/theme";
 import { flexCenter, rwdFontSize } from "@/utils/css";
@@ -14,6 +14,11 @@ interface RippleButtonProps<T extends ButtonType>
   borderBox?: boolean;
   children?: ReactNode;
   buttonRef?: React.ForwardedRef<HTMLButtonElement>;
+  ref?:
+    | ((instance: HTMLElement | null) => void | (() => void))
+    | RefObject<HTMLElement>
+    | null
+    | undefined;
 }
 
 function ThemeButton<T extends ButtonType>({ ...rest }: RippleButtonProps<T>) {
@@ -42,7 +47,7 @@ const RippleButtonBase = styled(ThemeButton).withConfig({
           padding: 0.5em !important;
         `
       : css`
-          height: fit-content;
+          height: fit-content !important;
         `}
 `;
 
@@ -50,6 +55,7 @@ export default function RippleButton<T extends ButtonType>({
   children,
   palette = "main",
   category,
+  ref,
   ...rest
 }: RippleButtonProps<T>) {
   const type = ["link", "icon"].includes(category) ? "link" : undefined;
@@ -58,6 +64,7 @@ export default function RippleButton<T extends ButtonType>({
       category={category}
       palette={palette as "main"}
       type={type}
+      ref={ref}
       {...rest}
     >
       {children}

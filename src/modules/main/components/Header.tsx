@@ -23,7 +23,6 @@ const HeaderWrapper = styled.div`
   justify-content: space-between;
   box-sizing: border-box;
   padding: 0px ${percentageOfFigma(32).max};
-  position: sticky;
   top: 0;
   background-color: ${({ theme }) => theme.white};
 `;
