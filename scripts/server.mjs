@@ -12,11 +12,11 @@ if (process.argv.includes("-p")) {
 }
 
 if (process.argv.includes("build")) {
-  ls = spawn(`yarn`, ["next", "build"]);
+  ls = spawn(`pnpm`, ["next", "build"]);
 } else if (process.argv.includes("start")) {
-  ls = spawn(`yarn`, ["next", "start"]);
+  ls = spawn(`pnpm`, ["next", "start"]);
 } else {
-  ls = spawn(`yarn`, ["next", "dev"]);
+  ls = spawn(`pnpm`, ["next", "dev"]);
 }
 
 ls.on("exit", () => {

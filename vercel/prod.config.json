@@ -1,3 +1,3 @@
 {
-  "buildCommand": "yarn build -p"
+  "buildCommand": "pnpm build -p"
 }
