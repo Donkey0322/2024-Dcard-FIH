@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node scripts/server.mjs dev",
-    "build": "node scripts/server.mjs build",
-    "start": "node scripts/server.mjs start",
+    "dev": "scripts/server.sh dev",
+    "build": "scripts/server.sh build",
+    "start": "scripts/server.sh start",
     "lint": "next lint . --ext ts,tsx --max-warnings 0 --fix",
     "prepare": "husky",
     "commit": "node scripts/commit/index.mjs"
