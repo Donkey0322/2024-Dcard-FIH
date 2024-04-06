@@ -23,15 +23,25 @@ fi
 
 env_file="envs/.env.$environment"
 
-# Check if the .env file exists
-if [ ! -f "$env_file" ]; then
-    exit 1
-fi
+# List of filenames to check
+files=(".env" ".env.$environment" ".env.local" "envs/.env.$environment.local")
 
-# Source the .env file
-source "$env_file"
+# Iterate over each filename
+for file in "${files[@]}"; do
+    # Check if the file exists
+    if [ -f "envs/$file" ]; then
+        source "envs/$file"
+    fi
+done
 
 export PORT=$PORT
+
+if [ -f "envs/.env.local" ]; then
+    export OAUTH_CLIENT_ID=$OAUTH_CLIENT_ID
+    export OAUTH_CLIENT_SECRET=$OAUTH_CLIENT_SECRET
+    export NEXTAUTH_SECRET=$NEXTAUTH_SECRET
+    export NEXTAUTH_URL=$NEXTAUTH_URL
+fi
 
 echo "Running pnpm next $command in $environment environment"
 

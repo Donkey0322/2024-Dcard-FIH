@@ -19,5 +19,20 @@ export default function useUrl(
     if (options.delete) for (const key of options.delete) params.delete(key);
   }
 
-  return `${destination ?? pathname}?${params.toString()}`;
+  const dynamicSet = (
+    newParams?: Record<string, string>,
+    destination?: string,
+    options?: { delete?: string[] }
+  ) => {
+    if (newParams)
+      for (const [key, value] of Object.entries(newParams))
+        params.set(key, value);
+
+    if (options) {
+      if (options.delete) for (const key of options.delete) params.delete(key);
+    }
+    return `${destination ?? pathname}?${params.toString()}`;
+  };
+
+  return { url: `${destination ?? pathname}?${params.toString()}`, dynamicSet };
 }

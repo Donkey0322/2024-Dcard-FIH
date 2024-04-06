@@ -14,3 +14,13 @@ export const IssueBody = styled.div`
     line-height: 2em;
   }
 `;
+
+export const IssueBodyContent = styled.div.withConfig({
+  shouldForwardProp: (prop) => !["isOverflow", "hasContent"].includes(prop),
+})<{
+  isOverflow?: boolean;
+  hasContent?: boolean;
+}>`
+  visibility: ${({ isOverflow }) => (isOverflow ? "hidden" : "visible")};
+  ${({ hasContent, theme }) => !hasContent && `color: ${theme.gray[500]}`}
+`;

@@ -58,5 +58,5 @@ export function useOverflow(element: RefObject<HTMLDivElement>) {
     };
   }, [handleResizeWindow]);
 
-  return isOverflow;
+  return { isOverflow, forceCheck: handleResizeWindow };
 }

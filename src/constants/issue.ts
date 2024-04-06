@@ -1,0 +1,1 @@
+export const FETCH_ISSUE_ONETIME_NUMBER = 10;

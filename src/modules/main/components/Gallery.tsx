@@ -1,25 +1,41 @@
 "use client";
 
+import { AnimatePresence } from "framer-motion";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import styled from "styled-components";
 
-import type { IssueType } from "@/modules/main/types";
+import type { IssueType, RepoType } from "@/modules/main/types";
 
+import Select from "@/components/Select";
+import { FETCH_ISSUE_ONETIME_NUMBER } from "@/constants/issue";
 import { useScrollToEnd } from "@/hooks/useElements";
 import useUrl from "@/hooks/useUrl";
 import GalleryItem from "@/modules/main/components/GalleryItem";
 import PostModal from "@/modules/main/components/PostModal";
+import useFilter from "@/modules/main/hooks/useFilter";
 
 interface Props {
   issues?: IssueType[];
+  filters?: {
+    repos?: RepoType[];
+  };
 }
+
+const FilterBar = styled.div`
+  display: flex;
+  column-gap: 8px;
+  align-items: center;
+  padding: 1em 2em 0.5em;
+  /* border-bottom: 2px solid ${({ theme }) => theme.main[500]}; */
+`;
 
 const GalleryContainer = styled.div`
   flex: 1;
-  background-color: #f1eff9;
+  background-color: ${({ theme }) => theme.pink[100]};
   display: flex;
   flex-direction: column;
+  /* padding: 2em; */
 `;
 
 const GalleryContent = styled.div`
@@ -29,7 +45,7 @@ const GalleryContent = styled.div`
   display: flex;
   gap: 4em;
   flex-wrap: wrap;
-  padding: 2em 2em;
+  padding: 2em;
   &::after {
     content: "";
     flex: auto;
@@ -37,7 +53,7 @@ const GalleryContent = styled.div`
   }
 `;
 
-export default function Gallery({ issues }: Props) {
+export default function Gallery({ issues, filters }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
@@ -46,31 +62,58 @@ export default function Gallery({ issues }: Props) {
 
   const searchParams = useSearchParams();
   const currentPage = Number(searchParams.get("page")) || 1;
+  const mode = searchParams.get("mode");
 
-  useEffect(() => setOpen(issueId ? true : false), [issueId]);
+  useEffect(
+    () =>
+      setOpen(
+        issueId || mode === "preview" || mode === "create" ? true : false
+      ),
+    [issueId, mode]
+  );
 
-  const newPage = useUrl({ page: String(currentPage + 1) });
-  const homePage = useUrl(undefined, "/post", { delete: ["mode"] });
+  const { url: newPage } = useUrl({ page: String(currentPage + 1) });
+  const { url: homePage } = useUrl(undefined, "/post", { delete: ["mode"] });
 
   const scrollElement = useScrollToEnd(() => {
-    if (issues?.length && issues.length >= 10 * currentPage)
+    if (
+      issues?.length &&
+      issues.length >= FETCH_ISSUE_ONETIME_NUMBER * currentPage
+    )
       router.replace(newPage);
   });
 
+  const { repoName, handleRepo } = useFilter();
+
   return (
     <GalleryContainer>
+      <FilterBar>
+        <Select
+          title={"Repository"}
+          selectedKeys={repoName}
+          icon=""
+          items={filters?.repos?.map((repo) => ({
+            label: repo.name,
+            key: repo.name,
+          }))}
+          onSelect={({ key }) => handleRepo(key)}
+          onDeselect={({ key }) => handleRepo(key)}
+        />
+      </FilterBar>
       <GalleryContent ref={scrollElement}>
-        {issues?.map((issue, index) => (
-          <GalleryItem key={index} issue={issue} />
-        ))}
+        <AnimatePresence>
+          {issues?.map((issue, index) => (
+            <GalleryItem key={issue.id} issue={issue} index={index} />
+          ))}
+        </AnimatePresence>
       </GalleryContent>
       <PostModal
         open={open}
         onCancel={() => {
           router.replace(homePage);
-          setOpen(false);
         }}
         issue={issues?.find((issue) => issue.id === issueId)}
+        repos={filters?.repos}
       />
     </GalleryContainer>
   );

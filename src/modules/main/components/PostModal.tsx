@@ -1,24 +1,31 @@
 "use client";
 
-import { Form, Input, Modal } from "antd";
+import { Form, Input, Modal, Select } from "antd";
+import { useForm } from "antd/es/form/Form";
 import TextArea from "antd/es/input/TextArea";
-import { useRouter, useSearchParams } from "next/navigation";
+import { redirect, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import styled from "styled-components";
 
-import type { IssueType } from "@/modules/main/types";
+import type { IssueType, RepoType } from "@/modules/main/types";
 import type { Type } from "@/utils/types";
 
 import { RippleButton } from "@/components/Button";
 import Markdown from "@/components/Markdown";
 import useUrl from "@/hooks/useUrl";
-import { IssueBody } from "@/modules/main/components/Issue/Body";
-import { updateIssue } from "@/modules/main/services";
+import {
+  IssueBody,
+  IssueBodyContent,
+} from "@/modules/main/components/Issue/Body";
+import { createIssue, updateIssue } from "@/modules/main/services";
 
 interface DetailModalProps extends Type<typeof Modal> {
   onCancel: () => void;
   issue?: IssueType;
+  repos?: RepoType[];
 }
+
+type Mode = "create" | "preview" | "edit" | "info";
 
 const ModalTitle = styled.div`
   font-size: 20px;
@@ -44,18 +51,31 @@ const ButtonWrapper = styled.div`
   column-gap: 8px;
 `;
 
-export default function PostModal({ open, onCancel, issue }: DetailModalProps) {
+export default function PostModal({
+  open,
+  onCancel,
+  issue,
+  repos,
+}: DetailModalProps) {
   const router = useRouter();
+  const [form] = useForm();
 
   const [submitButtonShow, setSubmitButtonShow] = useState(false);
   const [title, setTitle] = useState(issue?.title ?? "");
-  const [body, setBody] = useState(issue?.body ?? "");
+  const [body, setBody] = useState<string | undefined>(
+    issue?.body ?? undefined
+  );
+  const [repo, setRepo] = useState<string | undefined>(undefined);
   const [submitting, setSubmitting] = useState(false);
+  const [closing, setClosing] = useState(false);
+  const [creating, setCreating] = useState(false);
 
   const searchParams = useSearchParams();
-  const mode = searchParams.get("mode") ?? "info";
-  const infoIssueUrl = useUrl({ mode: "info" }, `/post/${issue?.id}`);
-  const editIssueUrl = useUrl({ mode: "edit" }, `/post/${issue?.id}`);
+  const mode = (searchParams.get("mode") ?? "info") as Mode;
+  const { url: infoIssueUrl } = useUrl({ mode: "info" });
+  const { url: editIssueUrl } = useUrl({ mode: "edit" });
+  const { url: createIssueUrl } = useUrl({ mode: "create" });
+  const { url: previewIssueUrl } = useUrl({ mode: "preview" });
 
   useEffect(() => {
     setSubmitButtonShow(
@@ -65,10 +85,20 @@ export default function PostModal({ open, onCancel, issue }: DetailModalProps) {
 
   useEffect(() => {
     setTitle(issue?.title ?? "");
-    setBody(issue?.body ?? "");
+    setBody(issue?.body ?? undefined);
   }, [issue?.body, issue?.title]);
 
-  const handleSubmit = useCallback(async () => {
+  useEffect(() => {
+    if (!submitButtonShow && mode === "preview") redirect(infoIssueUrl);
+  }, [infoIssueUrl, mode, submitButtonShow]);
+
+  const handleCancel = useCallback(() => {
+    setClosing(true);
+    onCancel();
+    setClosing(false);
+  }, [onCancel]);
+
+  const handleEdit = useCallback(async () => {
     if (
       issue?.repository?.name &&
       issue?.repository?.owner?.login &&
@@ -82,17 +112,31 @@ export default function PostModal({ open, onCancel, issue }: DetailModalProps) {
         title,
         body,
       });
+      router.replace(infoIssueUrl);
       setSubmitting(false);
-      onCancel?.();
     }
   }, [
     body,
+    infoIssueUrl,
     issue?.number,
     issue?.repository?.name,
     issue?.repository?.owner.login,
-    onCancel,
+    router,
     title,
   ]);
+
+  const handleCreate = useCallback(async () => {
+    if (repo && title) {
+      setCreating(true);
+      await createIssue({
+        repo,
+        title,
+        body,
+      });
+      setCreating(false);
+      onCancel?.();
+    }
+  }, [body, onCancel, repo, title]);
 
   const Footer = useMemo(
     () => (
@@ -102,46 +146,81 @@ export default function PostModal({ open, onCancel, issue }: DetailModalProps) {
             category="solid"
             palette="main"
             onClick={() => {
-              router.push(editIssueUrl);
+              router.replace(editIssueUrl);
             }}
             loading={submitting}
           >
             編輯
           </RippleButton>
         ) : submitButtonShow ? (
-          <RippleButton
-            category="solid"
-            palette="main"
-            onClick={() => void handleSubmit()}
-            loading={submitting}
-            disabled={title === "" || body.length < 30}
-          >
-            儲存
-          </RippleButton>
+          <>
+            <RippleButton
+              category={mode === "preview" ? "outlined" : "solid"}
+              palette="sub"
+              onClick={() => {
+                mode === "preview"
+                  ? router.replace(issue ? editIssueUrl : createIssueUrl)
+                  : router.replace(previewIssueUrl);
+              }}
+            >
+              {mode === "preview" ? "取消預覽" : "預覽"}
+            </RippleButton>
+            <RippleButton
+              category="solid"
+              palette="main"
+              onClick={() =>
+                issue?.repository?.name
+                  ? void handleEdit()
+                  : void handleCreate()
+              }
+              loading={issue?.repository?.name ? submitting : creating}
+              disabled={
+                title === "" ||
+                !body ||
+                body?.length < 30 ||
+                (!issue?.repository?.name && !repo)
+              }
+            >
+              提交
+            </RippleButton>
+          </>
         ) : (
-          <RippleButton
-            category="outlined"
-            palette="main"
-            onClick={() => {
-              router.replace(infoIssueUrl);
-            }}
-            loading={submitting}
-          >
-            取消編輯
-          </RippleButton>
+          mode === "edit" && (
+            <RippleButton
+              category="outlined"
+              palette="main"
+              onClick={() => {
+                router.replace(infoIssueUrl);
+              }}
+            >
+              取消編輯
+            </RippleButton>
+          )
         )}
-        <RippleButton category="outlined" palette="gray" onClick={onCancel}>
+        <RippleButton
+          category="outlined"
+          palette="gray"
+          onClick={handleCancel}
+          loading={closing}
+        >
           關閉
         </RippleButton>
       </ButtonWrapper>
     ),
     [
-      body.length,
+      body,
+      closing,
+      createIssueUrl,
+      creating,
       editIssueUrl,
-      handleSubmit,
+      handleCancel,
+      handleCreate,
+      handleEdit,
       infoIssueUrl,
+      issue,
       mode,
-      onCancel,
+      previewIssueUrl,
+      repo,
       router,
       submitButtonShow,
       submitting,
@@ -152,30 +231,59 @@ export default function PostModal({ open, onCancel, issue }: DetailModalProps) {
   return (
     <Modal
       title={
-        mode === "edit" ? (
-          <Form>
+        mode === "edit" || mode === "create" ? (
+          <Form form={form}>
+            {mode === "create" && (
+              <Form.Item
+                name="repo"
+                rules={[{ required: true, message: "Repo is required" }]}
+                initialValue={repo}
+              >
+                <Select
+                  onChange={(value) => setRepo(value)}
+                  placeholder={"Select an repo to create issue."}
+                  options={repos?.map((repo) => ({
+                    value: repo.name,
+                    label: repo.name,
+                  }))}
+                />
+              </Form.Item>
+            )}
             <Form.Item
               name="title"
               rules={[{ required: true, message: "Title is required!" }]}
               initialValue={title}
             >
-              <Input onChange={(event) => setTitle(event.target.value)} />
+              <Input
+                onChange={(event) => setTitle(event.target.value)}
+                placeholder="Input Issue Title"
+              />
             </Form.Item>
           </Form>
         ) : (
-          <ModalTitle>{issue?.title}</ModalTitle>
+          <ModalTitle>{title}</ModalTitle>
         )
       }
       centered
       open={open}
       footer={Footer}
-      onCancel={onCancel}
+      afterOpenChange={(open) => {
+        if (open)
+          form.setFieldsValue({
+            repo,
+            title,
+            body,
+          });
+        else
+          form.setFieldsValue({ title: "", body: undefined, repo: undefined });
+      }}
+      onCancel={handleCancel}
       closable={false}
       style={{ overflow: "scroll", maxHeight: "90vh" }}
     >
       <IssueBody>
-        {mode === "edit" ? (
-          <Form>
+        {mode === "edit" || mode === "create" ? (
+          <Form form={form}>
             <Form.Item
               name="body"
               rules={[
@@ -192,11 +300,14 @@ export default function PostModal({ open, onCancel, issue }: DetailModalProps) {
                 onChange={(event) => {
                   setBody(event.target.value);
                 }}
+                placeholder="Input Issue Body (over 30 words)"
               ></TextArea>
             </Form.Item>
           </Form>
         ) : (
-          <Markdown>{issue?.body}</Markdown>
+          <IssueBodyContent hasContent={!!body}>
+            <Markdown>{body ?? "No content"}</Markdown>
+          </IssueBodyContent>
         )}
       </IssueBody>
     </Modal>

@@ -1,11 +1,11 @@
 import GithubProvider from "next-auth/providers/github";
 
-import type { Account, AuthOptions, Session, User } from "next-auth";
-import type { AdapterUser } from "next-auth/adapters";
+import type { AuthOptions, Session } from "next-auth";
 import type { JWT } from "next-auth/jwt";
 
 export interface MySession extends Session {
   accessToken: string;
+  username: string;
 }
 
 export const authOptions: AuthOptions = {
@@ -16,31 +16,16 @@ export const authOptions: AuthOptions = {
     }),
   ],
   callbacks: {
-    session: function ({
-      session,
-      token,
-    }: {
-      session: Session;
-      token: JWT;
-      user: AdapterUser;
-    }) {
-      return { ...session, accessToken: token.accessToken };
+    session: function ({ session, token }: { session: Session; token: JWT }) {
+      return {
+        ...session,
+        accessToken: token.accessToken,
+        username: token.username,
+      };
     },
-    jwt: function ({
-      token,
-      user,
-      account,
-    }: {
-      token: JWT;
-      user: User;
-      account: Account | null;
-    }) {
-      if (user) {
-        token.id = user.id;
-      }
-      if (account) {
-        token.accessToken = account.access_token;
-      }
+    jwt: function ({ token, account, profile }) {
+      if (profile) token.username = (profile as { login: string }).login;
+      if (account) token.accessToken = account.access_token;
       return token;
     },
   },
