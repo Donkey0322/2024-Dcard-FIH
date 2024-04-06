@@ -3,9 +3,9 @@ import { css } from "styled-components";
 import { FIGMA_HEIGHT, FIGMA_WITH, MOBILE_WITH } from "@/constants/rwd";
 
 export const flexCenter = css`
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 `;
 
 export const percentageOfFigma = (number: number) => {

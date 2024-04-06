@@ -7,6 +7,9 @@ import type { MouseEventHandler } from "react";
 
 import { RippleButton } from "@/components/Button";
 
+import DeleteIcon from "@/assets/icons/delete";
+import EditIcon from "@/assets/icons/edit";
+
 interface Props {
   handleEdit?: () => void;
   handleClose?: () => Promise<void>;
@@ -39,6 +42,7 @@ export default function Operation({ handleEdit, handleClose }: Props) {
           handleEdit?.();
         }}
       >
+        <EditIcon />
         編輯
       </RippleButton>
       <RippleButton
@@ -47,6 +51,7 @@ export default function Operation({ handleEdit, handleClose }: Props) {
         loading={deleting}
         onClick={handleCloseIssue}
       >
+        {!deleting && <DeleteIcon />}
         刪除
       </RippleButton>
     </OperationWrapper>

@@ -34,6 +34,14 @@ const RippleButtonBase = styled(ThemeButton).withConfig({
   white-space: nowrap;
   box-sizing: ${({ borderBox }) => (borderBox ? "border-box" : "content-box")};
   line-height: 1em;
+  & svg {
+    &:has(+ *) {
+      margin-right: 0.5em;
+    }
+    &:nth-child(n + 2) {
+      margin-left: 0.5em;
+    }
+  }
   ${flexCenter};
   ${rwdFontSize(16)};
   ${({ category, palette }) => getTheme({ category, palette })};

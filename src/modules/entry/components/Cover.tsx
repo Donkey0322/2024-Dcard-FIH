@@ -10,6 +10,7 @@ import { hexToRgb } from "@/utils/color";
 import { backgroundCenter, percentageOfFigma } from "@/utils/css";
 
 import CoverImage from "@/assets/images/Cover.jpg";
+import GithubIcon from "@/assets/images/Github.png";
 
 export const Background = styled.div`
   background: url(${CoverImage.src});
@@ -85,6 +86,17 @@ const ButtonGroup = styled.div`
 
 const Button = styled(TapButton)`
   background-color: ${({ theme: { main } }) => hexToRgb(main[100], 0.61)};
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  &::before {
+    background-image: url(${GithubIcon.src});
+    width: 2em;
+    height: 2em;
+    ${backgroundCenter}
+    display: block;
+    content: "";
+  }
 `;
 
 export default function Cover({ isAuth }: { isAuth: boolean }) {
