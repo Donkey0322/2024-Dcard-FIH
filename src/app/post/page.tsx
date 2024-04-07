@@ -28,7 +28,6 @@ export default async function Home({
     state
   );
   const repos = await getRepos();
-  console.log(issues.length);
   const user = await getUser();
 
   return (

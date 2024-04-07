@@ -20,6 +20,6 @@ export async function getComments({ repo, owner, issue }: FetchIssueBasis) {
     );
     return data;
   } catch (error) {
-    return undefined;
+    throw error;
   }
 }

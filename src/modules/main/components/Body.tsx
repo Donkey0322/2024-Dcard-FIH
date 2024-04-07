@@ -19,7 +19,7 @@ export const IssueBodyContent = styled.div.withConfig({
   hasContent?: boolean;
 }>`
   visibility: ${({ isOverflow }) => (isOverflow ? "hidden" : "visible")};
-  ${({ hasContent, theme }) => !hasContent && `color: ${theme.gray[500]}`}
+  color: ${({ hasContent, theme }) => !hasContent && theme.gray[500]};
   & img {
     width: 100%;
   }

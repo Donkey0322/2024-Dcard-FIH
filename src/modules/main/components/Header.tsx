@@ -48,7 +48,9 @@ export default function Header({ user }: Props) {
     try {
       await signOut();
       router.push("/");
-    } catch (error) {}
+    } catch (error) {
+      throw error;
+    }
   };
   const { url: createIssueUrl } = useUrl({ mode: "create" });
 
