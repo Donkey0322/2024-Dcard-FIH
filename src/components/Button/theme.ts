@@ -36,6 +36,14 @@ export const buttonTheme = {
       hover: { background: ColorTheme.main[300] },
       active: { background: ColorTheme.main[700] },
     },
+    sky: {
+      normal: {
+        background: ColorTheme.main[300],
+        text: ColorTheme.white,
+      },
+      hover: { background: ColorTheme.main[500] },
+      active: { background: ColorTheme.main[700] },
+    },
     sub: {
       normal: {
         background: ColorTheme.sub[500],
