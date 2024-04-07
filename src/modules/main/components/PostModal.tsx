@@ -7,17 +7,15 @@ import { redirect, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import styled from "styled-components";
 
-import type { IssueType, RepoType } from "@/modules/main/types";
+import type { CommentType, IssueType, RepoType } from "@/modules/main/types";
 import type { Type } from "@/utils/types";
 
 import { RippleButton } from "@/components/Button";
 import Markdown from "@/components/Markdown";
 import useUrl from "@/hooks/useUrl";
-import {
-  IssueBody,
-  IssueBodyContent,
-} from "@/modules/main/components/Issue/Body";
-import { createIssue, updateIssue } from "@/modules/main/services";
+import { IssueBody, IssueBodyContent } from "@/modules/main/components/Body";
+import Comments from "@/modules/main/components/Comment";
+import { createIssue, getComments, updateIssue } from "@/modules/main/services";
 
 interface DetailModalProps extends Type<typeof Modal> {
   onCancel: () => void;
@@ -49,6 +47,7 @@ const ButtonWrapper = styled.div`
   display: flex;
   justify-content: flex-end;
   column-gap: 8px;
+  margin-top: 30px;
 `;
 
 export default function PostModal({
@@ -91,6 +90,32 @@ export default function PostModal({
   useEffect(() => {
     if (!submitButtonShow && mode === "preview") redirect(infoIssueUrl);
   }, [infoIssueUrl, mode, submitButtonShow]);
+  useEffect(() => {
+    if (mode === "edit" && issue?.pull_request) redirect(infoIssueUrl);
+  }, [infoIssueUrl, issue?.pull_request, mode]);
+
+  const [comments, setComments] = useState<CommentType[]>([]);
+
+  useEffect(() => {
+    const [owner, repoName] = (
+      searchParams.get("repo") as `${string}/${string}`
+    )?.split("/") ?? ["", ""];
+    void (async () => {
+      if (issue?.number) {
+        const data = await getComments({
+          repo: issue?.repository?.name ?? repoName,
+          owner: issue?.repository?.owner.login ?? owner,
+          issue: issue.number,
+        });
+        setComments(data ?? []);
+      }
+    })();
+  }, [
+    issue?.number,
+    issue?.repository?.name,
+    issue?.repository?.owner.login,
+    searchParams,
+  ]);
 
   const handleCancel = useCallback(() => {
     setClosing(true);
@@ -141,62 +166,63 @@ export default function PostModal({
   const Footer = useMemo(
     () => (
       <ButtonWrapper>
-        {mode === "info" ? (
-          <RippleButton
-            category="solid"
-            palette="main"
-            onClick={() => {
-              router.replace(editIssueUrl);
-            }}
-            loading={submitting}
-          >
-            編輯
-          </RippleButton>
-        ) : submitButtonShow ? (
-          <>
-            <RippleButton
-              category={mode === "preview" ? "outlined" : "solid"}
-              palette="sub"
-              onClick={() => {
-                mode === "preview"
-                  ? router.replace(issue ? editIssueUrl : createIssueUrl)
-                  : router.replace(previewIssueUrl);
-              }}
-            >
-              {mode === "preview" ? "取消預覽" : "預覽"}
-            </RippleButton>
+        {!issue?.pull_request &&
+          (mode === "info" ? (
             <RippleButton
               category="solid"
               palette="main"
-              onClick={() =>
-                issue?.repository?.name
-                  ? void handleEdit()
-                  : void handleCreate()
-              }
-              loading={issue?.repository?.name ? submitting : creating}
-              disabled={
-                title === "" ||
-                !body ||
-                body?.length < 30 ||
-                (!issue?.repository?.name && !repo)
-              }
-            >
-              提交
-            </RippleButton>
-          </>
-        ) : (
-          mode === "edit" && (
-            <RippleButton
-              category="outlined"
-              palette="main"
               onClick={() => {
-                router.replace(infoIssueUrl);
+                router.replace(editIssueUrl);
               }}
+              loading={submitting}
             >
-              取消編輯
+              編輯
             </RippleButton>
-          )
-        )}
+          ) : submitButtonShow ? (
+            <>
+              <RippleButton
+                category={mode === "preview" ? "outlined" : "solid"}
+                palette="sub"
+                onClick={() => {
+                  mode === "preview"
+                    ? router.replace(issue ? editIssueUrl : createIssueUrl)
+                    : router.replace(previewIssueUrl);
+                }}
+              >
+                {mode === "preview" ? "取消預覽" : "預覽"}
+              </RippleButton>
+              <RippleButton
+                category="solid"
+                palette="main"
+                onClick={() =>
+                  issue?.repository?.name
+                    ? void handleEdit()
+                    : void handleCreate()
+                }
+                loading={issue?.repository?.name ? submitting : creating}
+                disabled={
+                  title === "" ||
+                  !body ||
+                  body?.length < 30 ||
+                  (!issue?.repository?.name && !repo)
+                }
+              >
+                提交
+              </RippleButton>
+            </>
+          ) : (
+            mode === "edit" && (
+              <RippleButton
+                category="outlined"
+                palette="main"
+                onClick={() => {
+                  router.replace(infoIssueUrl);
+                }}
+              >
+                取消編輯
+              </RippleButton>
+            )
+          ))}
         <RippleButton
           category="outlined"
           palette="gray"
@@ -274,8 +300,12 @@ export default function PostModal({
             title,
             body,
           });
-        else
+        else {
+          setRepo(undefined);
+          setBody(undefined);
+          setTitle("");
           form.setFieldsValue({ title: "", body: undefined, repo: undefined });
+        }
       }}
       onCancel={handleCancel}
       closable={false}
@@ -301,13 +331,18 @@ export default function PostModal({
                   setBody(event.target.value);
                 }}
                 placeholder="Input Issue Body (over 30 words)"
-              ></TextArea>
+              />
             </Form.Item>
           </Form>
         ) : (
-          <IssueBodyContent hasContent={!!body}>
-            <Markdown>{body ?? "No content"}</Markdown>
-          </IssueBodyContent>
+          <>
+            <IssueBodyContent hasContent={!!body}>
+              <Markdown>{body ?? "No content"}</Markdown>
+            </IssueBodyContent>
+            {comments.length ? (
+              <Comments comments={comments} issue={issue} />
+            ) : null}
+          </>
         )}
       </IssueBody>
     </Modal>

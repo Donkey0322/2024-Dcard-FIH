@@ -11,9 +11,11 @@ import Select from "@/components/Select";
 import { FETCH_ISSUE_ONETIME_NUMBER } from "@/constants/issue";
 import { useScrollToEnd } from "@/hooks/useElements";
 import useUrl from "@/hooks/useUrl";
-import GalleryItem from "@/modules/main/components/GalleryItem";
 import PostModal from "@/modules/main/components/PostModal";
 import useFilter from "@/modules/main/hooks/useFilter";
+import Post from "@/modules/main/pages/Post";
+
+import { RepoIcon, StateIcon } from "@/assets/icons";
 
 interface Props {
   issues?: IssueType[];
@@ -24,24 +26,23 @@ interface Props {
 
 const FilterBar = styled.div`
   display: flex;
-  column-gap: 8px;
+  gap: 8px;
   align-items: center;
   padding: 1em 2em 0.5em;
-  /* border-bottom: 2px solid ${({ theme }) => theme.main[500]}; */
+  flex-wrap: wrap;
 `;
 
-const GalleryContainer = styled.div`
+const PostsContainer = styled.div`
   flex: 1;
+  height: 0;
   background-color: ${({ theme }) => theme.pink[100]};
   display: flex;
   flex-direction: column;
-  /* padding: 2em; */
 `;
 
-const GalleryContent = styled.div`
-  max-height: 85vh;
-  height: 85vh;
+const PostsContent = styled.div`
   overflow: scroll;
+  flex: 1;
   display: flex;
   gap: 4em;
   flex-wrap: wrap;
@@ -53,7 +54,7 @@ const GalleryContent = styled.div`
   }
 `;
 
-export default function Gallery({ issues, filters }: Props) {
+export default function PostList({ issues, filters }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
@@ -83,30 +84,40 @@ export default function Gallery({ issues, filters }: Props) {
       router.replace(newPage);
   });
 
-  const { repoName, handleRepo } = useFilter();
+  const { repoName, state, handleRepo, handleState } = useFilter();
 
   return (
-    <GalleryContainer>
+    <PostsContainer>
       <FilterBar>
         <Select
           title={"Repository"}
           selectedKeys={repoName}
-          icon=""
+          icon={<RepoIcon />}
           items={filters?.repos?.map((repo) => ({
-            label: repo.name,
-            key: repo.name,
+            label: repo.full_name,
+            key: repo.full_name,
           }))}
           onSelect={({ key }) => handleRepo(key)}
           onDeselect={({ key }) => handleRepo(key)}
         />
+        <Select
+          title={"State"}
+          selectedKeys={[state]}
+          icon={<StateIcon />}
+          items={["open", "closed", "all"].map((state) => ({
+            label: state,
+            key: state,
+          }))}
+          onSelect={({ key }) => handleState(key)}
+        />
       </FilterBar>
-      <GalleryContent ref={scrollElement}>
+      <PostsContent ref={scrollElement}>
         <AnimatePresence>
           {issues?.map((issue, index) => (
-            <GalleryItem key={issue.id} issue={issue} index={index} />
+            <Post key={issue.id} issue={issue} index={index} />
           ))}
         </AnimatePresence>
-      </GalleryContent>
+      </PostsContent>
       <PostModal
         open={open}
         onCancel={() => {
@@ -115,6 +126,6 @@ export default function Gallery({ issues, filters }: Props) {
         issue={issues?.find((issue) => issue.id === issueId)}
         repos={filters?.repos}
       />
-    </GalleryContainer>
+    </PostsContainer>
   );
 }

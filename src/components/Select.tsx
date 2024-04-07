@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
 
 import { RippleButton } from "@/components/Button";
 
-import { DownArrowIcon, UpArrowIcon } from "@/assets/icons/arrow";
+import { DownArrowIcon, UpArrowIcon } from "@/assets/icons";
 
 interface SelectProps extends MenuProps {
   title?: string;

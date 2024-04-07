@@ -6,9 +6,6 @@ export const IssueBody = styled.div`
   & ul {
     margin-left: 1em;
   }
-  & img {
-    width: 100%;
-  }
   &,
   & * {
     line-height: 2em;
@@ -23,4 +20,7 @@ export const IssueBodyContent = styled.div.withConfig({
 }>`
   visibility: ${({ isOverflow }) => (isOverflow ? "hidden" : "visible")};
   ${({ hasContent, theme }) => !hasContent && `color: ${theme.gray[500]}`}
+  & img {
+    width: 100%;
+  }
 `;
