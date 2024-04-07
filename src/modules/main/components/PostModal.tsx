@@ -12,6 +12,7 @@ import type { Type } from "@/utils/types";
 
 import { RippleButton } from "@/components/Button";
 import Markdown from "@/components/Markdown";
+import useError from "@/hooks/useError";
 import useUrl from "@/hooks/useUrl";
 import { IssueBody, IssueBodyContent } from "@/modules/main/components/Body";
 import Comments from "@/modules/main/components/Comment";
@@ -21,6 +22,7 @@ interface DetailModalProps extends Type<typeof Modal> {
   onCancel: () => void;
   issue?: IssueType;
   repos?: RepoType[];
+  editOrCreate?: "edit" | "create";
 }
 
 type Mode = "create" | "preview" | "edit" | "info";
@@ -55,6 +57,7 @@ export default function PostModal({
   onCancel,
   issue,
   repos,
+  editOrCreate,
 }: DetailModalProps) {
   const router = useRouter();
   const [form] = useForm();
@@ -64,7 +67,9 @@ export default function PostModal({
   const [body, setBody] = useState<string | undefined>(
     issue?.body ?? undefined
   );
-  const [repo, setRepo] = useState<string | undefined>(undefined);
+  const [repo, setRepo] = useState<{ owner: string; name: string } | undefined>(
+    undefined
+  );
   const [submitting, setSubmitting] = useState(false);
   const [closing, setClosing] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -95,25 +100,33 @@ export default function PostModal({
   }, [infoIssueUrl, issue?.pull_request, mode]);
 
   const [comments, setComments] = useState<CommentType[]>([]);
+  const [owner, repoName] = (
+    searchParams.get("repo") as `${string}/${string}`
+  )?.split("/") ?? [issue?.repository?.owner.login, issue?.repository?.name];
+
+  const { context, setError } = useError();
 
   useEffect(() => {
-    const [owner, repoName] = (
-      searchParams.get("repo") as `${string}/${string}`
-    )?.split("/") ?? ["", ""];
     void (async () => {
-      if (issue?.number) {
-        const data = await getComments({
-          repo: issue?.repository?.name ?? repoName,
-          owner: issue?.repository?.owner.login ?? owner,
-          issue: issue.number,
-        });
-        setComments(data ?? []);
+      try {
+        if (issue?.number) {
+          const data = await getComments({
+            repo: repoName,
+            owner: owner,
+            issue: issue.number,
+          });
+          setComments(data ?? []);
+        }
+      } catch (error) {
+        throw error;
       }
     })();
   }, [
     issue?.number,
     issue?.repository?.name,
     issue?.repository?.owner.login,
+    owner,
+    repoName,
     searchParams,
   ]);
 
@@ -124,44 +137,51 @@ export default function PostModal({
   }, [onCancel]);
 
   const handleEdit = useCallback(async () => {
-    if (
-      issue?.repository?.name &&
-      issue?.repository?.owner?.login &&
-      issue?.number
-    ) {
-      setSubmitting(true);
-      await updateIssue({
-        repo: issue.repository.name,
-        owner: issue.repository.owner.login,
-        issue: issue.number,
-        title,
-        body,
-      });
-      router.replace(infoIssueUrl);
+    try {
+      if (issue?.number) {
+        setSubmitting(true);
+        await updateIssue({
+          repo: repoName,
+          owner: owner,
+          issue: issue.number,
+          title,
+          body,
+        });
+        router.replace(infoIssueUrl);
+      }
+    } catch (error) {
+      setError(error as Error);
+    } finally {
       setSubmitting(false);
     }
   }, [
     body,
     infoIssueUrl,
     issue?.number,
-    issue?.repository?.name,
-    issue?.repository?.owner.login,
+    owner,
+    repoName,
     router,
+    setError,
     title,
   ]);
 
   const handleCreate = useCallback(async () => {
-    if (repo && title) {
-      setCreating(true);
-      await createIssue({
-        repo,
-        title,
-        body,
-      });
+    try {
+      if (repo && title) {
+        setCreating(true);
+        await createIssue({
+          repo,
+          title,
+          body,
+        });
+        onCancel?.();
+      }
+    } catch (error) {
+      setError(error as Error);
+    } finally {
       setCreating(false);
-      onCancel?.();
     }
-  }, [body, onCancel, repo, title]);
+  }, [body, onCancel, repo, setError, title]);
 
   const Footer = useMemo(
     () => (
@@ -195,16 +215,17 @@ export default function PostModal({
                 category="solid"
                 palette="main"
                 onClick={() =>
-                  issue?.repository?.name
-                    ? void handleEdit()
-                    : void handleCreate()
+                  editOrCreate === "create"
+                    ? void handleCreate()
+                    : void handleEdit()
                 }
-                loading={issue?.repository?.name ? submitting : creating}
+                loading={editOrCreate === "create" ? creating : submitting}
                 disabled={
                   title === "" ||
                   !body ||
                   body?.length < 30 ||
-                  (!issue?.repository?.name && !repo)
+                  (editOrCreate === "create" && !repo) ||
+                  (editOrCreate === "edit" && !repoName)
                 }
               >
                 提交
@@ -239,6 +260,7 @@ export default function PostModal({
       createIssueUrl,
       creating,
       editIssueUrl,
+      editOrCreate,
       handleCancel,
       handleCreate,
       handleEdit,
@@ -247,6 +269,7 @@ export default function PostModal({
       mode,
       previewIssueUrl,
       repo,
+      repoName,
       router,
       submitButtonShow,
       submitting,
@@ -255,96 +278,108 @@ export default function PostModal({
   );
 
   return (
-    <Modal
-      title={
-        mode === "edit" || mode === "create" ? (
-          <Form form={form}>
-            {mode === "create" && (
+    <>
+      {context}
+      <Modal
+        title={
+          mode === "edit" || mode === "create" ? (
+            <Form form={form}>
+              {mode === "create" && (
+                <Form.Item
+                  name="repo"
+                  rules={[{ required: true, message: "Repo is required" }]}
+                  initialValue={repo}
+                >
+                  <Select
+                    onChange={(value) => {
+                      const [owner, name] = (
+                        value as `${string}/${string}`
+                      )?.split("/");
+                      setRepo({ owner, name });
+                    }}
+                    placeholder={"Select an repo to create issue."}
+                    options={repos?.map((repo) => ({
+                      value: repo.full_name,
+                      label: repo.full_name,
+                    }))}
+                  />
+                </Form.Item>
+              )}
               <Form.Item
-                name="repo"
-                rules={[{ required: true, message: "Repo is required" }]}
-                initialValue={repo}
+                name="title"
+                rules={[{ required: true, message: "Title is required!" }]}
+                initialValue={title}
               >
-                <Select
-                  onChange={(value) => setRepo(value)}
-                  placeholder={"Select an repo to create issue."}
-                  options={repos?.map((repo) => ({
-                    value: repo.name,
-                    label: repo.name,
-                  }))}
+                <Input
+                  onChange={(event) => setTitle(event.target.value)}
+                  placeholder="Input Issue Title"
                 />
               </Form.Item>
-            )}
-            <Form.Item
-              name="title"
-              rules={[{ required: true, message: "Title is required!" }]}
-              initialValue={title}
-            >
-              <Input
-                onChange={(event) => setTitle(event.target.value)}
-                placeholder="Input Issue Title"
-              />
-            </Form.Item>
-          </Form>
-        ) : (
-          <ModalTitle>{title}</ModalTitle>
-        )
-      }
-      centered
-      open={open}
-      footer={Footer}
-      afterOpenChange={(open) => {
-        if (open)
-          form.setFieldsValue({
-            repo,
-            title,
-            body,
-          });
-        else {
-          setRepo(undefined);
-          setBody(undefined);
-          setTitle("");
-          form.setFieldsValue({ title: "", body: undefined, repo: undefined });
+            </Form>
+          ) : (
+            <ModalTitle>{title}</ModalTitle>
+          )
         }
-      }}
-      onCancel={handleCancel}
-      closable={false}
-      style={{ overflow: "scroll", maxHeight: "90vh" }}
-    >
-      <IssueBody>
-        {mode === "edit" || mode === "create" ? (
-          <Form form={form}>
-            <Form.Item
-              name="body"
-              rules={[
-                {
-                  type: "string",
-                  min: 30,
-                  message: "Content over 30 words is required!",
-                },
-              ]}
-              initialValue={body}
-            >
-              <TextArea
-                rows={8}
-                onChange={(event) => {
-                  setBody(event.target.value);
-                }}
-                placeholder="Input Issue Body (over 30 words)"
-              />
-            </Form.Item>
-          </Form>
-        ) : (
-          <>
-            <IssueBodyContent hasContent={!!body}>
-              <Markdown>{body ?? "No content"}</Markdown>
-            </IssueBodyContent>
-            {comments.length ? (
-              <Comments comments={comments} issue={issue} />
-            ) : null}
-          </>
-        )}
-      </IssueBody>
-    </Modal>
+        centered
+        open={open}
+        footer={Footer}
+        afterOpenChange={(open) => {
+          if (open)
+            form.setFieldsValue({
+              repo,
+              title,
+              body,
+            });
+          else {
+            setRepo(undefined);
+            setBody(undefined);
+            setTitle("");
+            form.setFieldsValue({
+              title: "",
+              body: undefined,
+              repo: undefined,
+            });
+          }
+        }}
+        onCancel={handleCancel}
+        closable={false}
+        style={{ overflow: "scroll", maxHeight: "90vh" }}
+      >
+        <IssueBody>
+          {mode === "edit" || mode === "create" ? (
+            <Form form={form}>
+              <Form.Item
+                name="body"
+                rules={[
+                  {
+                    type: "string",
+                    min: 30,
+                    message: "Content over 30 words is required!",
+                  },
+                ]}
+                initialValue={body}
+              >
+                <TextArea
+                  rows={8}
+                  onChange={(event) => {
+                    setBody(event.target.value);
+                  }}
+                  placeholder="Input Issue Body (over 30 words)"
+                />
+              </Form.Item>
+            </Form>
+          ) : (
+            <>
+              <IssueBodyContent hasContent={!!body}>
+                <Markdown>{body ?? "No content"}</Markdown>
+              </IssueBodyContent>
+              {comments.length ? (
+                <Comments comments={comments} issue={issue} />
+              ) : null}
+            </>
+          )}
+        </IssueBody>
+      </Modal>
+    </>
   );
 }

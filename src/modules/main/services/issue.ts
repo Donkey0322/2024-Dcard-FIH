@@ -19,7 +19,7 @@ export interface FetchIssueBasis {
 }
 
 interface CreateIssueBasis {
-  repo: string;
+  repo: { owner: string; name: string };
   title: string;
   body?: string;
 }
@@ -83,8 +83,8 @@ export async function updateIssue({
       headers,
     });
     revalidateTag("issues");
-  } catch {
-    return undefined;
+  } catch (error) {
+    throw error;
   }
 }
 
@@ -102,8 +102,8 @@ export async function updateIssueState(
       headers,
     });
     revalidateTag("issues");
-  } catch {
-    return undefined;
+  } catch (error) {
+    throw error;
   }
 }
 
@@ -111,14 +111,14 @@ export async function createIssue({ repo, title, body }: CreateIssueBasis) {
   try {
     const { octokit, user } = await authorizeInstance();
     await octokit.request("POST /repos/{owner}/{repo}/issues", {
-      owner: user ?? "",
-      repo,
+      owner: repo.owner ?? user ?? "",
+      repo: repo.name,
       title,
       body,
       headers,
     });
     revalidateTag("issues");
-  } catch {
-    return undefined;
+  } catch (error) {
+    throw error;
   }
 }
