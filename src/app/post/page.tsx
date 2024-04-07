@@ -5,10 +5,9 @@ import type { MySession } from "@/app/api/auth/[...nextauth]/auth";
 import type { AuthOptions } from "next-auth";
 
 import { authOptions } from "@/app/api/auth/[...nextauth]/auth";
-import Gallery from "@/modules/main/components/Gallery";
 import Header from "@/modules/main/components/Header";
-import { getIssues } from "@/modules/main/services";
-import { getRepos } from "@/modules/main/services/static";
+import PostList from "@/modules/main/pages/PostList";
+import { getIssues, getRepos, getUser } from "@/modules/main/services";
 
 export default async function Home({
   searchParams,
@@ -19,14 +18,23 @@ export default async function Home({
   if (!session) redirect("/");
 
   const currentPage = Number(searchParams?.page) || 1;
-  const repo = searchParams.repo ? String(searchParams.repo) : undefined;
-  const data = await getIssues(currentPage, repo);
+  const [owner, repo] = (searchParams.repo as `${string}/${string}`)?.split(
+    "/"
+  ) ?? [undefined, undefined];
+  const state = searchParams.state ? String(searchParams.state) : "open";
+  const issues = await getIssues(
+    currentPage,
+    repo ? { name: repo, owner } : undefined,
+    state
+  );
   const repos = await getRepos();
+  console.log(issues.length);
+  const user = await getUser();
 
   return (
     <>
-      <Header name={session.username} />
-      <Gallery issues={data} filters={{ repos }} />
+      <Header user={user} />
+      <PostList issues={issues} filters={{ repos }} />
     </>
   );
 }

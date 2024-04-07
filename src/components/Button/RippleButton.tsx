@@ -38,9 +38,6 @@ const RippleButtonBase = styled(ThemeButton).withConfig({
     &:has(+ *) {
       margin-right: 0.5em;
     }
-    &:nth-child(n + 2) {
-      margin-left: 0.5em;
-    }
   }
   ${flexCenter};
   ${rwdFontSize(16)};

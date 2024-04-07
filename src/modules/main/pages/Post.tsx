@@ -2,11 +2,11 @@
 
 import { Skeleton, Tooltip } from "antd";
 import { formatRelative, parseISO } from "date-fns";
-import { motion, usePresence } from "framer-motion";
+import { usePresence } from "framer-motion";
 import { gsap } from "gsap";
+import { capitalize } from "lodash";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import styled from "styled-components";
 
 import type { IssueType } from "@/modules/main/types";
 import type { Type } from "@/utils/types";
@@ -17,108 +17,61 @@ import Markdown from "@/components/Markdown";
 import { FETCH_ISSUE_ONETIME_NUMBER } from "@/constants/issue";
 import { useOverflow } from "@/hooks/useElements";
 import useUrl from "@/hooks/useUrl";
+import { IssueBodyContent } from "@/modules/main/components/Body";
 import {
-  IssueBody,
-  IssueBodyContent,
-} from "@/modules/main/components/Issue/Body";
+  Link,
+  PostBody,
+  PostContainer,
+  PostFooterContainer,
+  PostFooterContent,
+  PostTitle,
+} from "@/modules/main/components/Item";
 import Operation from "@/modules/main/components/Operation";
-import { closeIssue } from "@/modules/main/services";
+import { updateIssueState } from "@/modules/main/services";
 import theme from "@/providers/theme/theme";
 
-import MoreIcon from "@/assets/icons/more";
+import { MoreIcon } from "@/assets/icons";
 
-interface Props extends Type<typeof GalleryItemContainer> {
+interface Props extends Type<typeof PostContainer> {
   issue?: IssueType;
   index?: number;
 }
 
-const GalleryItemContainer = styled(motion.div)`
-  width: 400px;
-  max-width: 100%;
-  border: 2px solid ${({ theme }) => theme.gray["500"]};
-  border-radius: 1em;
-  box-shadow: rgba(50, 50, 93, 0.25) 0px 6px 12px -2px,
-    rgba(0, 0, 0, 0.3) 0px 3px 7px -3px;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-  flex: 1;
-  flex-basis: 400px;
-  background-color: ${({ theme }) => theme.white};
-  position: relative;
-  cursor: pointer;
-`;
-
-const GalleryItemTitle = styled.div`
-  font-size: large;
-  font-weight: 500;
-  margin: 0.5em 1em;
-  display: flex;
-  line-height: 2em;
-  justify-content: space-between;
-`;
-
-export const GalleryItemBody = styled(IssueBody)`
-  margin: 0.5em 1em;
-  max-height: 200px;
-  min-height: 200px;
-  overflow: hidden;
-  position: relative;
-`;
-
-const GalleryItemFooterContainer = styled.div`
-  flex: 1;
-  border-bottom-left-radius: 1em;
-  border-bottom-right-radius: 1em;
-  display: flex;
-  flex-direction: column;
-  justify-content: end;
-`;
-
-const GalleryItemFooterContent = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.5em;
-  border-top: 1px solid ${({ theme }) => theme.gray["500"]};
-  color: ${({ theme }) => theme.gray["500"]};
-`;
-
-const Link = styled.a`
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-`;
-
-export default function GalleryItem({
+export default function Post({
   issue,
   index,
   onClick: handleClick,
   ...rest
 }: Props) {
-  const [toolTipOpen, setToolTipOpen] = useState(false);
+  /**
+   * kit for retrieving repo targeted
+   */
+  const searchParams = useSearchParams();
+  const [owner, repoName] = (
+    searchParams.get("repo") as `${string}/${string}`
+  )?.split("/") ?? [undefined, undefined];
 
-  const element = useRef<HTMLDivElement>(null);
-  const { isOverflow, forceCheck } = useOverflow(element);
-
+  /**
+   * kit for retrieving issue targeted and defining destination of navigation
+   */
   const router = useRouter();
+  const pathname = usePathname();
   const { url: infoIssueUrl } = useUrl({ mode: "info" }, `/post/${issue?.id}`);
   const { url: editIssueUrl } = useUrl({ mode: "edit" }, `/post/${issue?.id}`);
-
-  const pathname = usePathname();
   const issueId = Number(pathname.split("/")?.[2]);
+
+  /**
+   * kit for improving UI disguising
+   */
+  const element = useRef<HTMLDivElement>(null);
+  const { isOverflow, forceCheck } = useOverflow(element);
   useEffect(() => forceCheck(), [forceCheck, issueId]);
-  const searchParams = useSearchParams();
-  const repoName = searchParams.get("repo")?.split("&") ?? [];
 
-  const handleEdit = () => {
-    router.replace(editIssueUrl);
-    setToolTipOpen(false);
-  };
-
+  /**
+   * kit for animating
+   */
   const ref = useRef(null);
   const [isPresent, safeToRemove] = usePresence();
-
   useEffect(() => {
     if (!isPresent) {
       gsap.to(ref.current, {
@@ -128,22 +81,38 @@ export default function GalleryItem({
     }
   }, [isPresent, safeToRemove]);
 
+  const [toolTipOpen, setToolTipOpen] = useState(false);
+
+  const handleEdit = () => {
+    router.replace(editIssueUrl);
+    setToolTipOpen(false);
+  };
+
   const handleClose = async () => {
-    if (
-      issue?.repository?.name &&
-      issue?.repository?.owner?.login &&
-      issue?.number
-    )
-      await closeIssue({
-        repo: issue.repository.name,
-        owner: issue.repository.owner.login,
+    if (issue?.number)
+      await updateIssueState({
+        repo: issue?.repository?.name ?? repoName,
+        owner: issue?.repository?.owner.login ?? owner,
         issue: issue.number,
       });
     setToolTipOpen(false);
   };
 
+  const handleOpen = async () => {
+    if (issue?.number)
+      await updateIssueState(
+        {
+          repo: issue?.repository?.name ?? repoName,
+          owner: issue?.repository?.owner.login ?? owner,
+          issue: issue.number,
+        },
+        "open"
+      );
+    setToolTipOpen(false);
+  };
+
   return (
-    <GalleryItemContainer
+    <PostContainer
       key={issue?.id}
       onClick={(event) => {
         router.replace(infoIssueUrl);
@@ -152,7 +121,6 @@ export default function GalleryItem({
       ref={ref}
       initial={{ opacity: 0, scale: 0.5 }}
       animate={{ opacity: 1, scale: 1 }}
-      // exit={{ scale: 0, opacity: 0 }}
       transition={{
         duration: 0.8,
         delay: ((index ?? 0) % FETCH_ISSUE_ONETIME_NUMBER) * 0.15,
@@ -160,12 +128,17 @@ export default function GalleryItem({
       }}
       {...rest}
     >
-      <GalleryItemTitle>
+      <PostTitle>
         {issue?.title}
         <Tooltip
           open={toolTipOpen}
           title={
-            <Operation handleEdit={handleEdit} handleClose={handleClose} />
+            <Operation
+              handleEdit={handleEdit}
+              handleClose={handleClose}
+              handleOpen={handleOpen}
+              issue={issue}
+            />
           }
           onOpenChange={() => setToolTipOpen((prev) => !prev)}
           trigger="click"
@@ -182,9 +155,9 @@ export default function GalleryItem({
             <MoreIcon></MoreIcon>
           </RippleButton>
         </Tooltip>
-      </GalleryItemTitle>
+      </PostTitle>
       <Divider />
-      <GalleryItemBody>
+      <PostBody>
         {isOverflow === undefined && (
           <Skeleton
             active
@@ -208,16 +181,16 @@ export default function GalleryItem({
         >
           <Markdown>{issue?.body ?? "No content"}</Markdown>
         </IssueBodyContent>
-      </GalleryItemBody>
-      <GalleryItemFooterContainer>
-        <GalleryItemFooterContent>
+      </PostBody>
+      <PostFooterContainer>
+        <PostFooterContent>
           <RippleButton
             category="link"
             palette="main"
             style={{ padding: 0, maxWidth: "50%" }}
           >
             <Link
-              href={issue?.repository?.html_url ?? ""}
+              href={issue?.html_url}
               target="_blank"
               onClick={(e) => e.stopPropagation()}
             >
@@ -225,10 +198,10 @@ export default function GalleryItem({
             </Link>
           </RippleButton>
           {issue?.updated_at
-            ? formatRelative(parseISO(issue.updated_at), new Date())
+            ? capitalize(formatRelative(parseISO(issue.updated_at), new Date()))
             : ""}
-        </GalleryItemFooterContent>
-      </GalleryItemFooterContainer>
-    </GalleryItemContainer>
+        </PostFooterContent>
+      </PostFooterContainer>
+    </PostContainer>
   );
 }

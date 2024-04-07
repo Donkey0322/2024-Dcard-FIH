@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 "use client";
 
 import styled from "styled-components";
@@ -110,7 +109,7 @@ export default function Cover({ isAuth }: { isAuth: boolean }) {
           </SloganWrapper>
           <ButtonGroup>
             <Button onClick={() => void signInGithub()}>
-              {/* {t("entry.button.browseStadium")} */}用 Github 帳號登入
+              用 Github 帳號登入
             </Button>
           </ButtonGroup>
         </TitleWrapper>

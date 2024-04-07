@@ -2,7 +2,9 @@ import { AntdRegistry } from "@ant-design/nextjs-registry";
 import { Contrail_One } from "next/font/google";
 import { getServerSession } from "next-auth";
 
+import type { MySession } from "@/app/api/auth/[...nextauth]/auth";
 import type { Metadata } from "next";
+import type { AuthOptions } from "next-auth";
 
 import { authOptions } from "@/app/api/auth/[...nextauth]/auth";
 import StyledComponentsRegistry from "@/libs/styled-components";
@@ -27,7 +29,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession<AuthOptions, MySession>(authOptions);
 
   return (
     <html lang="en">
