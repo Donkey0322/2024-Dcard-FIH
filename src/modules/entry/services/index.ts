@@ -4,6 +4,6 @@ export const signInGithub = async () => {
   try {
     await signIn("github", { callbackUrl: "/post" });
   } catch (error) {
-    console.log(error);
+    throw error;
   }
 };

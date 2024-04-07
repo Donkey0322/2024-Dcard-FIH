@@ -57,6 +57,9 @@ const PostsContent = styled.div`
 export default function PostList({ issues, filters }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [editOrCreate, setEditOrCreate] = useState<
+    "edit" | "create" | undefined
+  >(undefined);
 
   const pathname = usePathname();
   const issueId = Number(pathname.split("/")?.[2]);
@@ -65,13 +68,15 @@ export default function PostList({ issues, filters }: Props) {
   const currentPage = Number(searchParams.get("page")) || 1;
   const mode = searchParams.get("mode");
 
-  useEffect(
-    () =>
-      setOpen(
-        issueId || mode === "preview" || mode === "create" ? true : false
-      ),
-    [issueId, mode]
-  );
+  useEffect(() => {
+    setOpen(issueId || mode === "preview" || mode === "create" ? true : false);
+  }, [issueId, mode]);
+
+  useEffect(() => {
+    if (mode === "edit") setEditOrCreate("edit");
+    if (mode === "create") setEditOrCreate("create");
+    if (!open) setEditOrCreate(undefined);
+  }, [mode, open]);
 
   const { url: newPage } = useUrl({ page: String(currentPage + 1) });
   const { url: homePage } = useUrl(undefined, "/post", { delete: ["mode"] });
@@ -125,6 +130,7 @@ export default function PostList({ issues, filters }: Props) {
         }}
         issue={issues?.find((issue) => issue.id === issueId)}
         repos={filters?.repos}
+        editOrCreate={editOrCreate}
       />
     </PostsContainer>
   );

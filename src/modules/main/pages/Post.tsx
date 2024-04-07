@@ -89,26 +89,34 @@ export default function Post({
   };
 
   const handleClose = async () => {
-    if (issue?.number)
-      await updateIssueState({
-        repo: issue?.repository?.name ?? repoName,
-        owner: issue?.repository?.owner.login ?? owner,
-        issue: issue.number,
-      });
-    setToolTipOpen(false);
-  };
-
-  const handleOpen = async () => {
-    if (issue?.number)
-      await updateIssueState(
-        {
+    try {
+      if (issue?.number)
+        await updateIssueState({
           repo: issue?.repository?.name ?? repoName,
           owner: issue?.repository?.owner.login ?? owner,
           issue: issue.number,
-        },
-        "open"
-      );
-    setToolTipOpen(false);
+        });
+      setToolTipOpen(false);
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const handleOpen = async () => {
+    try {
+      if (issue?.number)
+        await updateIssueState(
+          {
+            repo: issue?.repository?.name ?? repoName,
+            owner: issue?.repository?.owner.login ?? owner,
+            issue: issue.number,
+          },
+          "open"
+        );
+      setToolTipOpen(false);
+    } catch (error) {
+      throw error;
+    }
   };
 
   return (
